@@ -2,7 +2,7 @@
 # Clock + calendar popup. Today is shown as [29].
 #   Year-month row: the month being viewed, centered; ● at the right end (dim on the current month, bright on another month — click to jump back to this month)
 #   ‹ 08 row = previous month, 10 › row = next month (click the row; the popup stays open after the click)
-#   Events: everything that touches the viewed month (multi-day shown as 09.23-09.26). Calendars are the ones selected in Itsycal. Over 16 events → '+N more'
+#   Events: everything that touches the viewed month (multi-day shown as 09.23-09.26). All macOS Calendar calendars (holidays shown separately). Over 16 events → '+N more'
 # The calendar is prebuilt in the background (every 10 s, redrawn only when changed). Clicks go through popup_click.sh.
 source "$CONFIG_DIR/colors.sh"; source "$CONFIG_DIR/config.sh"; source "$CONFIG_DIR/plugins/popup.sh"
 OFF_FILE="$HOME/.cache/sketchybar/calmonth"
@@ -19,15 +19,15 @@ days=$((10#$(date -j -v+1m -v-1d -f %Y-%m-%d "$base" +%d)))
 prev=$(date -j -v-1m -f %Y-%m-%d "$base" +%m); next=$(date -j -v+1m -f %Y-%m-%d "$base" +%m)
 [ "$OFF" = 0 ] && today=$((10#$(date +%d))) || today=0
 
-# Events: everything that touches the viewed month (including multi-day events that started the month before). Calendars are the ones selected in Itsycal
+# Events: everything that touches the viewed month (including multi-day events that started the month before). All macOS Calendar calendars
 # helper/events reads Apple Calendar directly (icalBuddy reports the last day of multi-day all-day events one day short). 0.5 s per run, 0.02 s CPU
-CALS=$(defaults read com.mowglii.ItsycalApp SelectedCalendars 2>/dev/null | tr -d ' ()"\n')
 # Holidays (rev 9): the subscribed holiday calendar named in HOLIDAY_CAL (includes substitute holidays, nothing hard-coded) — names in red in the event list, day numbers in red
 #   Kept out of the regular events and read separately so consecutive holidays merge into one row (Chuseok holiday · Chuseok · Chuseok holiday → 09.24-09.26 Chuseok). Reloaded for each month viewed
 HC="$HOME/.cache/sketchybar/holiday.cal"; [ -s "$HC" ] || { [ -n "${HOLIDAY_CAL-}" ] && "${CONFIG_DIR}/helper/events" calid "${HOLIDAY_CAL-}" > "$HC" 2>/dev/null; }
 HID=$([ -n "${HOLIDAY_CAL-}" ] && cat "$HC" 2>/dev/null)
-EV=$("${CONFIG_DIR}/helper/events" "$base" "$(tr ',' '\n' <<<"$CALS" | grep -vx "${HID:-_}" | paste -sd, -)" 2>/dev/null)
-HOL=""; [ -n "$HID" ] && HOL=$("${CONFIG_DIR}/helper/events" "$base" "$HID" 2>/dev/null | python3 -c 'import sys,datetime as D
+HRAW=""; [ -n "$HID" ] && HRAW=$("${CONFIG_DIR}/helper/events" "$base" "$HID" 2>/dev/null)
+EV=$("${CONFIG_DIR}/helper/events" "$base" 2>/dev/null | grep -vxF -f <(printf '%s\n' "$HRAW"))   # everything, minus the holiday rows
+HOL=""; [ -n "$HRAW" ] && HOL=$(python3 -c 'import sys,datetime as D
 y=int(sys.argv[1][:4]); rows=[]
 for l in sys.stdin:
   if "\t" not in l: continue
@@ -38,7 +38,7 @@ out=[]
 for r in rows:
   if out and out[-1][3]==r[3] and nd(out[-1][1])==r[0]: out[-1][1]=r[1]
   else: out.append(r[:])
-for a,b,n,base in out: print(("%s-%s" % (a,b) if a!=b else a)+"\t"+(base if any(x[3]==base and x[2]!=base for x in rows) and a!=b else n))' "$base")
+for a,b,n,base in out: print(("%s-%s" % (a,b) if a!=b else a)+"\t"+(base if any(x[3]==base and x[2]!=base for x in rows) and a!=b else n))' "$base" <<<"$HRAW")
 HDAYS=$(python3 -c 'import sys,datetime as D
 y,m=int(sys.argv[1][:4]),int(sys.argv[1][5:7])
 for l in sys.stdin:

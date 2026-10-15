@@ -36,6 +36,7 @@ The Pilo circle and its popup (needs [Pilo](https://pilo.garamnoh.workers.dev), 
 - macOS 14+ (developed on macOS 26/27, Apple silicon)
 - [Homebrew](https://brew.sh) and Xcode Command Line Tools (`xcode-select --install`) - the helpers are small Swift files compiled on install
 - Installed by `install.sh`: SketchyBar, JetBrains Mono, JetBrainsMono Nerd Font, [media-control](https://github.com/ungive/media-control)
+- Calendar: the built-in macOS Calendar, every calendar in it (iCloud, Google, subscribed...). No other calendar app needed
 
 Optional - each part hides or degrades without it:
 
